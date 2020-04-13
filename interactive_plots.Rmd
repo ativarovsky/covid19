@@ -1,0 +1,41 @@
+---
+title: "Interactive Plots"
+author: "Alice Tivarovsky"
+date: "4/12/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(coronavirus)
+library(plotly)
+library(viridis)
+
+
+data("coronavirus")
+
+```
+
+## Daily worldwide cumulative cases
+
+```{r}
+daily_df = 
+  coronavirus %>% 
+  group_by(date, type) %>% 
+  summarize(n = sum(cases)) 
+```
+
+
+```{r daily plotly}
+
+daily_df %>% 
+  plot_ly(x = ~date, 
+          y = ~n, 
+          type = "scatter", 
+          color = ~type, 
+          mode = "markers", 
+          stackgroup = "one")
+
+```
+
