@@ -1,0 +1,53 @@
+---
+title: "Exploratory"
+author: "Alice Tivarovsky"
+date: "4/12/2020"
+output: html_document
+---
+# Setup
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(coronavirus) 
+
+data("coronavirus")
+```
+
+# Summary by Country
+```{r}
+summary_df = 
+  coronavirus %>% 
+  group_by(Country.Region, type) %>% 
+  summarize(total_cases = sum(cases)) 
+```
+
+# Cases by Country and Type 
+
+```{r}
+# all dates
+all_cases = 
+coronavirus %>% 
+  group_by(Country.Region, type) %>% 
+  summarize(total_cases = sum(cases)) %>% 
+  pivot_wider(
+    names_from = type, 
+    values_from = total_cases
+  ) %>% 
+  arrange(-confirmed)
+
+# only latest day
+latest_cases = 
+coronavirus %>% 
+  filter(date == max(date)) %>% 
+  group_by(Country.Region, type) %>% 
+  summarize(total_cases = sum(cases)) %>% 
+  pivot_wider(
+    names_from = type, 
+    values_from = total_cases
+  ) %>% 
+  arrange(-confirmed)
+
+```
+
+
