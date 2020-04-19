@@ -13,6 +13,7 @@ library(plotly)
 library(viridis)
 library(flexdashboard)
 library(wbstats)
+library(DT)
 
 coronavirus::update_datasets(silence = TRUE)
 
@@ -112,6 +113,7 @@ valueBox(value = df_box[1], caption = "US Cases")
 
 # Cases and death rates by country
 
+Setup for bubble chart
 ```{r}
 # pull in population from wbstats
 
@@ -129,11 +131,47 @@ rates = left_join(coronavirus, pop, by = "Country.Region") %>%
   pivot_wider(names_from = type, values_from = total) %>% 
   filter(confirmed > 5000) %>% 
   mutate(case_rate = confirmed/population, 
-         death_rate = death/confirmed) %>% 
+         death_rate = death/confirmed) 
+```
+
+Bubble chart: 
+```{r bubble chart}
+
+rates %>% 
   plot_ly(y = ~ round(100*case_rate, 2), 
           x = ~ round(100*death_rate, 2), 
-          size = ~ confirmed, 
-          color = ~ Country.Region)
+          size = ~ (confirmed), 
+          color = ~ Country.Region, 
+          type = "scatter", 
+          mode = "markers", 
+          marker = list(sizemode = "diameter", opacity = 0.5), 
+          hoverinfo = "text", 
+          text = ~paste("", Country.Region, "<br> Confirmed Cases: ", paste(format(confirmed, big.mark = "," )),
+                                            "<br> Case Rate: ", paste(round(100 * case_rate, 2), "%", sep = ""),
+                                            "<br> Death Rate: ", paste(round(100 * death_rate, 2), "%", sep = ""))
+        ) %>% 
+  layout(yaxis = list(title = "Cases per Population", ticksuffix = "%"),
+                xaxis = list(title = "Death Rate", ticksuffix = "%", 
+                             dtick = 1, 
+                             tick0 = 0),
+                hovermode = "compare")
+  
+
+```
+
+# Table 
+
+```{r table}
+
+table
+  rates %>% 
+  select(-population) %>% 
+  arrange(-confirmed) %>% 
+  rename("Country" = "Country.Region", "Confirmed" = "confirmed", "Deaths" = "death", "Case Rate" = "case_rate", "Death Rate" = "death_rate", "Recovered" = "recovered") %>% 
+  select(Country, Confirmed, Recovered, Deaths, everything()) %>% 
+  datatable() %>% 
+    formatPercentage("Case Rate", 3) %>% 
+    formatPercentage("Death Rate", 3)
   
 
 ```
