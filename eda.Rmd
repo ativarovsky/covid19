@@ -10,7 +10,7 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(coronavirus) 
-
+library(wbstats)
 data("coronavirus")
 ```
 
@@ -49,5 +49,14 @@ coronavirus %>%
   arrange(-confirmed)
 
 ```
+
+# Population using wbstats
+
+```{r}
+pop = wb(indicator = "SP.POP.TOTL", startdate = 2018, enddate = 2019) %>% 
+  select(date, country, value)
+```
+
+
 
 

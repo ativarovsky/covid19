@@ -11,7 +11,10 @@ library(tidyverse)
 library(coronavirus)
 library(plotly)
 library(viridis)
+library(flexdashboard)
+library(wbstats)
 
+coronavirus::update_datasets(silence = TRUE)
 
 data("coronavirus")
 
@@ -35,7 +38,103 @@ daily_df %>%
           type = "scatter", 
           color = ~type, 
           mode = "markers", 
-          stackgroup = "one")
+          stackgroup = "one") %>% 
+  layout(title = "",
+        yaxis = list(title = "Cumulative Number of Cases"),
+        xaxis = list(title = "Date"),
+        legend = list(x = 0.1, y = 0.9),
+        hovermode = "compare")
+
+```
+
+## Boxes
+want 8 boxes: US total, US dead, US new, US new deaths and same for world
+```{r}
+# today's date
+max_date = max(coronavirus$date) 
+
+# US boxes
+us_total = coronavirus %>% 
+  select(Country.Region, type, cases) %>% 
+  filter(type == "confirmed", Country.Region == "US") %>% 
+  group_by(type) %>% 
+  summarize(n = sum(cases))
+
+us_dead = coronavirus %>% 
+  filter(type == "death",  Country.Region == "US") %>% 
+  select(Country.Region, type, cases)  %>% 
+  group_by(type) %>% 
+  summarize(n = sum(cases))
+
+us_new_cases = coronavirus %>% 
+    filter(type == "confirmed",  Country.Region == "US", date == max_date) %>% 
+    select(Country.Region, type, cases)  %>% 
+    group_by(type) %>% 
+    summarize(n = sum(cases))
+
+us_new_deaths = coronavirus %>% 
+    filter(type == "death",  Country.Region == "US", date == max_date) %>% 
+    select(Country.Region, type, cases)  %>% 
+    group_by(type) %>% 
+    summarize(n = sum(cases))
+
+# World boxes
+world_total = coronavirus %>% 
+  select(type, cases) %>% 
+  filter(type == "confirmed") %>% 
+  group_by(type) %>% 
+  summarize(n = sum(cases))
+
+world_dead = coronavirus %>% 
+  filter(type == "death") %>% 
+  select(Country.Region, type, cases)  %>% 
+  group_by(type) %>% 
+  summarize(n = sum(cases))
+
+world_new_cases = coronavirus %>% 
+    filter(type == "confirmed", date == max_date) %>% 
+    select(Country.Region, type, cases)  %>% 
+    group_by(type) %>% 
+    summarize(n = sum(cases))
+
+world_new_deaths = coronavirus %>% 
+    filter(type == "death", date == max_date) %>% 
+    select(Country.Region, type, cases)  %>% 
+    group_by(type) %>% 
+    summarize(n = sum(cases))
+
+# putting all 8 variables into a data frame
+df_box = tibble(us_total$n, us_dead$n, us_new_cases$n, us_new_deaths$n, world_total$n, world_dead$n, world_new_cases$n, world_new_deaths$n)
+```
+```{r}
+valueBox(value = df_box[1], caption = "US Cases")
+```
+
+# Cases and death rates by country
+
+```{r}
+# pull in population from wbstats
+
+pop = wb(indicator = "SP.POP.TOTL", startdate = 2018, enddate = 2019) %>% 
+  select(date, country, value) %>% 
+  filter(date == "2018") %>% 
+  mutate(country = recode(country, "United States" = "US", "Czech Republic" = "Czechia", "Korea, Rep." = "Korea, South", "Iran, Islamic Rep." = "Iran", "Russian Federation" = "Russia")) %>% 
+  rename("Country.Region" = "country")
+
+countries = coronavirus %>% distinct(Country.Region)
+
+rates = left_join(coronavirus, pop, by = "Country.Region") %>% 
+  group_by(Country.Region, type) %>% 
+  summarize(total = sum(cases), population = mean(value)) %>% 
+  pivot_wider(names_from = type, values_from = total) %>% 
+  filter(confirmed > 5000) %>% 
+  mutate(case_rate = confirmed/population, 
+         death_rate = death/confirmed) %>% 
+  plot_ly(y = ~ round(100*case_rate, 2), 
+          x = ~ round(100*death_rate, 2), 
+          size = ~ confirmed, 
+          color = ~ Country.Region)
+  
 
 ```
 
